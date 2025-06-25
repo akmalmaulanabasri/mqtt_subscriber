@@ -3,6 +3,8 @@ use rusqlite::{params, Connection};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::task;
 use serde_json::Value;
+use dotenvy::dotenv;
+use std::env;
 
 fn init_db() -> Connection {
     let conn = Connection::open("mqtt_logs.db").expect("Failed to open database");
@@ -29,11 +31,19 @@ fn save_message(conn: &Connection, topic: &str, message: &str, timestamp: i64) {
 
 #[tokio::main]
 async fn main() {
-    let db = init_db();
-    let db_conn = db; // move ke task
+    dotenv().ok(); // Load .env file
 
-    let mut mqttoptions = MqttOptions::new("rust-logger", "broker.hivemq.com", 1883);
+    let mqtt_host = env::var("MQTT_BROKER_HOST").unwrap_or("172.10.20.53".to_string());
+    let mqtt_port: u16 = env::var("MQTT_BROKER_PORT").unwrap_or("1883".to_string()).parse().unwrap();
+    let mqtt_username = env::var("MQTT_USERNAME").unwrap_or_default();
+    let mqtt_password = env::var("MQTT_PASSWORD").unwrap_or_default();
+
+    let db = init_db();
+    let db_conn = db;
+
+    let mut mqttoptions = MqttOptions::new("rust-logger", mqtt_host, mqtt_port);
     mqttoptions.set_keep_alive(std::time::Duration::from_secs(5));
+    mqttoptions.set_credentials(mqtt_username, mqtt_password);
 
     let (mut client, mut connection) = Client::new(mqttoptions, 10);
 
@@ -49,7 +59,6 @@ async fn main() {
 
                     println!("📥 [{}]: {}", topic, payload);
 
-                    // Validate if it's valid JSON
                     let json: Value = match serde_json::from_str(&payload) {
                         Ok(j) => j,
                         Err(_) => {
@@ -71,7 +80,6 @@ async fn main() {
         }
     });
 
-    // Keep alive
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }

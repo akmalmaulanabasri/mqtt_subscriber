@@ -6,7 +6,7 @@ A simple MQTT subscriber built with Rust that listens to the `/broker_alive` top
 
 ## 🚀 Features
 
-- Connects to a public MQTT broker (`broker.hivemq.com`)
+- Connects to a private ``use proxies (172.10.20.4)`` MQTT broker (`172.10.20.53`)
 - Subscribes to the topic `/broker_alive`
 - Parses and validates JSON messages
 - Saves messages into a local SQLite database with:
